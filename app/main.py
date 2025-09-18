@@ -8,6 +8,7 @@ import asyncio
 
 import httpx
 from fastapi import FastAPI, HTTPException
+from fastapi import Request
 from fastapi.responses import StreamingResponse, HTMLResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -153,11 +154,33 @@ def summarize_result(tool: str, result: Any) -> Any:
         md = "\n\n".join([gtab, ltab, atab])
         return {"raw": parsed, "markdown": md, "last_updated": parsed.get("last_updated")}
 
+    if tool == "NEWS_SENTIMENT" and isinstance(parsed, dict):
+        # Normalize Alpha's news payload
+        articles = []
+        for a in parsed.get("feed", []) or parsed.get("data", []):
+            articles.append(
+                {
+                    "title": a.get("title"),
+                    "url": a.get("url"),
+                    "time_published": a.get("time_published") or a.get("published_at"),
+                    "source": a.get("source") or a.get("source_domain"),
+                    "summary": a.get("summary") or a.get("snippet"),
+                    "ticker_sentiment": a.get("ticker_sentiment"),
+                }
+            )
+        return {"articles": articles, "raw": parsed}
+
     return parsed
 
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Alpha Vantage MCP Proxy", version="0.1.0")
+    # Include Marketaux news router
+    try:
+        from .marketaux import router as marketaux_router, cleanup_marketaux  # type: ignore
+        app.include_router(marketaux_router, prefix="/api")
+    except Exception as e:
+        print(f"Warning: Could not load Marketaux router: {e}")
 
     @app.on_event("startup")
     async def _startup() -> None:
@@ -173,6 +196,12 @@ def create_app() -> FastAPI:
     async def _shutdown() -> None:
         client: httpx.AsyncClient = app.state.http
         await client.aclose()
+        # Cleanup Marketaux client
+        try:
+            from .marketaux import cleanup_marketaux  # type: ignore
+            await cleanup_marketaux()
+        except Exception:
+            pass
 
     @app.post("/query")
     async def query(req: QueryRequest) -> Dict[str, Any]:
@@ -268,6 +297,8 @@ def create_app() -> FastAPI:
 </html>
 """
         return HTMLResponse(content=html)
+
+    # News endpoints moved to app/news.py
 
     @app.get("/")
     async def root() -> Dict[str, str]:
