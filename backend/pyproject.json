@@ -1,0 +1,9 @@
+{
+    "name": "stock-api",
+    "version": "1.0.0",
+    "description": "Real-time stock data API",
+    "main": "main.py",
+    "dependencies": {
+        "python": ">=3.7"
+    }
+}

@@ -1,0 +1,3 @@
+fastapi==0.104.1
+finnhub-python==2.4.20
+uvicorn==0.24.0
