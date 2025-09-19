@@ -1,4 +1,6 @@
 from __future__ import annotations
+from fastapi.middleware.cors import CORSMiddleware
+
 
 import os
 import re
@@ -11,6 +13,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse, HTMLResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
+load_dotenv(dotenv_path="e:/hackathon_idea/app/.env")
 
 ALPHA_VANTAGE_MCP_URL_ENV = "ALPHA_VANTAGE_MCP_URL"
 
@@ -53,6 +56,12 @@ class MCPClient:
 
 def pick_tool_for_message(text: str) -> tuple[str, Dict[str, Any]]:
     t = text.lower().strip()
+
+
+    # Investment advice pattern
+    if re.search(r"(where|how|which|what).*invest.*(stock|money|portfolio|fund|market)", t):
+        # Use TOP_GAINERS_LOSERS but set a flag for advice
+        return "TOP_GAINERS_LOSERS", {"_advice": True}
 
     # Top gainers/losers/most active
     if (
@@ -126,12 +135,12 @@ def _format_table(rows: List[Dict[str, Any]], title: str, cols: List[str]) -> st
 def summarize_result(tool: str, result: Any) -> Any:
     parsed = _maybe_parse_text_payload(result)
 
+
     if tool == "TOP_GAINERS_LOSERS" and isinstance(parsed, dict):
         gainers = parsed.get("top_gainers", [])[:10]
         losers = parsed.get("top_losers", [])[:10]
         active = parsed.get("most_actively_traded", [])[:10]
 
-        # Normalize keys to consistent set
         def normalize(rs: List[Dict[str, Any]]):
             out = []
             for r in rs:
@@ -151,13 +160,33 @@ def summarize_result(tool: str, result: Any) -> Any:
         atab = _format_table(normalize(active), "Most Active", ["ticker", "price", "change_%", "change", "volume"])
 
         md = "\n\n".join([gtab, ltab, atab])
-        return {"raw": parsed, "markdown": md, "last_updated": parsed.get("last_updated")}
+
+        # If _advice flag is set, prepend a summary
+        advice = ""
+        if isinstance(result, dict) and result.get("_advice"):
+            advice = (
+                "**Investment Tip:**\n"
+                "The following stocks are currently the top gainers in the market. "
+                "Consider researching these companies further before investing. "
+                "Remember, past performance does not guarantee future results.\n\n"
+            )
+        return {"raw": parsed, "markdown": advice + md, "last_updated": parsed.get("last_updated")}
 
     return parsed
 
 
 def create_app() -> FastAPI:
+
     app = FastAPI(title="Alpha Vantage MCP Proxy", version="0.1.0")
+
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Or specify your frontend URL
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.on_event("startup")
     async def _startup() -> None:
