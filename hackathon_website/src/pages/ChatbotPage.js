@@ -9,8 +9,12 @@ import { Send, Bot, User, MessageCircle } from 'lucide-react';
 
 const ChatContainer = styled.div`
   min-height: 100vh;
-  background: #0a2342;
-  background-image: linear-gradient(120deg, #0a2342 60%, #00c896 100%, #ffffff 120%);
+  background-color: #181b20;
+  background-image: linear-gradient(#181b20, #181b20 23%, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0) 92%, #181b20), 
+                    url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='8' cy='8' r='1' fill='%23333a44'/%3E%3C/svg%3E");
+  background-position: 0 0, 0 0;
+  background-size: auto, 16px;
+  color: #fefefd;
 `;
 
 const Content = styled.div`
@@ -23,25 +27,34 @@ const Content = styled.div`
 `;
 
 const PageTitle = styled.h1`
-  color: white;
-  font-size: 2.5rem;
+  background: linear-gradient(90deg, #a770ef 0%, #fdb99b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 3.5rem;
+  font-weight: 700;
   margin-bottom: 2rem;
   display: flex;
   align-items: center;
   gap: 1rem;
   text-align: center;
   justify-content: center;
+  
+  @media screen and (max-width: 767px) {
+    font-size: 2.5rem;
+  }
 `;
 
 const ChatWindow = styled.div`
   flex: 1;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  background: rgba(29, 33, 39, 0.9);
+  backdrop-filter: blur(20px);
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid #333a44;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 `;
 
 const MessagesContainer = styled.div`
@@ -64,20 +77,22 @@ const Message = styled.div`
 `;
 
 const MessageIcon = styled.div`
-  background: ${props => (props.isUser ? '#00c896' : '#fff')};
-  color: ${props => (props.isUser ? '#fff' : '#0a2342')};
+  background: ${props => (props.isUser ? 'linear-gradient(90deg, #a770ef 0%, #fdb99b 100%)' : '#1d2127')};
+  color: ${props => (props.isUser ? '#fff' : '#a770ef')};
+  border: 1px solid ${props => (props.isUser ? 'transparent' : '#555d6a')};
   border-radius: 50%;
   min-width: 35px;
   height: 35px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 5px; /* Aligns icon with the bottom of the bubble */
+  margin-bottom: 5px;
 `;
 
 const MessageBubble = styled.div`
-  background: ${props => (props.isUser ? '#00c896' : '#ffffff')};
-  color: ${props => (props.isUser ? 'white' : '#333')};
+  background: ${props => (props.isUser ? 'linear-gradient(90deg, #a770ef 0%, #fdb99b 100%)' : '#1d2127')};
+  color: ${props => (props.isUser ? 'white' : '#fefefd')};
+  border: 1px solid ${props => (props.isUser ? 'transparent' : '#555d6a')};
   padding: 0.8rem 1.2rem;
   border-radius: 20px;
   border-bottom-left-radius: ${props => (props.isUser ? '20px' : '5px')};
@@ -87,16 +102,22 @@ const MessageBubble = styled.div`
 
 const InputContainer = styled.div`
   padding: 1rem 2rem;
-  background: rgba(0, 0, 0, 0.2);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(29, 33, 39, 0.8);
+  border-top: 1px solid #333a44;
 `;
 
 const InputWrapper = styled.div`
   display: flex;
   align-items: center;
-  background: white;
+  background: #1d2127;
+  border: 1px solid #555d6a;
   border-radius: 25px;
   padding: 0.25rem;
+  transition: border-color 0.2s;
+  
+  &:focus-within {
+    border-color: #a770ef;
+  }
 `;
 
 const Input = styled.input`
@@ -106,11 +127,15 @@ const Input = styled.input`
   padding: 0.75rem 1rem;
   font-size: 1rem;
   background: transparent;
-  color: #222;
+  color: #fefefd;
+  
+  &::placeholder {
+    color: #a0a7b3;
+  }
 `;
 
 const SendButton = styled.button`
-  background: #0a2342;
+  background: linear-gradient(90deg, #a770ef 0%, #fdb99b 100%);
   color: white;
   border: none;
   border-radius: 50%;
@@ -124,6 +149,7 @@ const SendButton = styled.button`
 
   &:hover {
     transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(167, 112, 239, 0.3);
   }
 
   &:disabled {
@@ -135,20 +161,26 @@ const SendButton = styled.button`
 
 const WelcomeMessage = styled.div`
   text-align: center;
-  color: rgba(255, 255, 255, 0.8);
+  color: #d0d6de;
   margin: auto 0;
   padding: 2rem;
 `;
 
 const WelcomeTitle = styled.h3`
-  color: white;
+  background: linear-gradient(90deg, #a770ef 0%, #fdb99b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin-bottom: 1rem;
-  font-size: 1.5rem;
+  font-size: 2rem;
+  font-weight: 700;
 `;
 
 const WelcomeText = styled.p`
   line-height: 1.6;
   margin-bottom: 1rem;
+  color: #fefefd;
+  font-size: 1.125rem;
 `;
 
 const SampleQuestions = styled.div`
@@ -160,36 +192,46 @@ const SampleQuestions = styled.div`
 `;
 
 const SampleQuestion = styled.button`
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  padding: 0.5rem 1rem;
+  background: #1d2127;
+  border: 1px solid #555d6a;
+  color: #fefefd;
+  padding: 0.75rem 1.25rem;
   border-radius: 15px;
   cursor: pointer;
   font-size: 0.9rem;
+  font-weight: 500;
   transition: all 0.3s ease;
   
   &:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: #242831;
+    border-color: #a770ef;
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(167, 112, 239, 0.2);
   }
 `;
 
 // HELPER COMPONENTS
 // ===============================================
 
-// FIX: Moved BotMessageRenderer outside the main component for clarity and removed duplicates.
+// FIX: Improved BotMessageRenderer to properly parse all three tables
 const BotMessageRenderer = ({ text }) => {
   // Helper to parse a section into a table
   function parseSection(sectionTitle, text) {
-    const regex = new RegExp(`${sectionTitle}\\s*\\n([\\s\\S]*?)(?=\\n\\s*\\n|$)`, 'i');
+    // More robust regex that looks for the next ### or end of string
+    const regex = new RegExp(`###\\s*${sectionTitle}\\s*\\n([\\s\\S]*?)(?=\\n###|$)`, 'i');
     const match = text.match(regex);
     if (!match) return null;
-    const lines = match[1].split('\n').filter(line => line.trim());
-    if (lines.length < 2) return null; // Needs at least a header and one row
+    
+    const sectionContent = match[1].trim();
+    const lines = sectionContent.split('\n').filter(line => line.trim());
+    if (lines.length < 3) return null; // Needs at least header, separator, and one data row
+    
+    // Skip the separator line (the --- line)
     const headers = lines[0].split('|').map(h => h.trim()).filter(Boolean);
-    const rows = lines.slice(1).map(line => line.split('|').map(cell => cell.trim()).filter(Boolean));
-    return { headers, rows };
+    const dataLines = lines.slice(2); // Skip header and separator
+    const rows = dataLines.map(line => line.split('|').map(cell => cell.trim()).filter(Boolean));
+    
+    return { headers, rows: rows.filter(row => row.length > 0) };
   }
 
   const sections = [
@@ -204,49 +246,77 @@ const BotMessageRenderer = ({ text }) => {
     table: parseSection(section.title, text)
   }));
 
-  // If no tables found, fallback to markdown
-  if (!tables.some(t => t.table)) {
+  // Check if we found any tables
+  const foundTables = tables.filter(t => t.table);
+  
+  // If no tables found, fallback to regular markdown
+  if (foundTables.length === 0) {
     return <ReactMarkdown>{text}</ReactMarkdown>;
   }
 
-  // Render tables and any text before/after
-  let rendered = [];
-  let lastIndex = 0;
-  tables.forEach(({ title, table }) => {
-    if (!table) return;
-    const sectionRegex = new RegExp(`${title}\\s*\\n([\\s\\S]*?)(?=\\n\\s*\\n|$)`, 'i');
-    const match = text.match(sectionRegex);
-    if (match) {
-      const start = match.index;
-      if (start > lastIndex) {
-        rendered.push(<ReactMarkdown key={lastIndex}>{text.slice(lastIndex, start)}</ReactMarkdown>);
-      }
-      rendered.push(<h3 key={title} style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>{title}</h3>);
-      rendered.push(
-        <div key={title + "-table"} style={{ overflowX: 'auto', marginBottom: '1.5rem' }}>
-          <table style={{ borderCollapse: 'collapse', width: '100%', background: 'white', color: '#222', borderRadius: '10px', overflow: 'hidden', fontSize: '0.95rem' }}>
-            <thead>
-              <tr>
-                {table.headers.map((h, i) => <th key={i} style={{ border: '1px solid #ddd', padding: '8px', background: '#f3f3f3', textAlign: 'left' }}>{h}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {table.rows.map((row, i) => (
-                <tr key={i}>
-                  {row.map((cell, j) => <td key={j} style={{ border: '1px solid #ddd', padding: '8px' }}>{cell}</td>)}
+  // Render all found tables
+  return (
+    <div>
+      {foundTables.map(({ title, table }) => (
+        <div key={title} style={{ marginBottom: '2rem' }}>
+          <h3 style={{ 
+            marginTop: '1rem', 
+            marginBottom: '0.5rem',
+            background: 'linear-gradient(90deg, #a770ef 0%, #fdb99b 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}>
+            {title}
+          </h3>
+          <div style={{ overflowX: 'auto', marginBottom: '1.5rem' }}>
+            <table style={{ 
+              borderCollapse: 'collapse', 
+              width: '100%', 
+              background: 'white', 
+              color: '#222', 
+              borderRadius: '10px', 
+              overflow: 'hidden', 
+              fontSize: '0.9rem',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            }}>
+              <thead>
+                <tr>
+                  {table.headers.map((h, i) => (
+                    <th key={i} style={{ 
+                      border: '1px solid #ddd', 
+                      padding: '12px 8px', 
+                      background: '#f8f9fa', 
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      fontSize: '0.85rem'
+                    }}>
+                      {h}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {table.rows.map((row, i) => (
+                  <tr key={i} style={{ borderBottom: i === table.rows.length - 1 ? 'none' : '1px solid #f0f0f0' }}>
+                    {row.map((cell, j) => (
+                      <td key={j} style={{ 
+                        border: '1px solid #ddd', 
+                        padding: '10px 8px',
+                        fontSize: '0.85rem'
+                      }}>
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      );
-      lastIndex = start + match[0].length;
-    }
-  });
-  if (lastIndex < text.length) {
-    rendered.push(<ReactMarkdown key={lastIndex}>{text.slice(lastIndex)}</ReactMarkdown>);
-  }
-  return <>{rendered}</>;
+      ))}
+    </div>
+  );
 };
 
 // MAIN COMPONENT

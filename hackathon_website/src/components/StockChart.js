@@ -61,7 +61,7 @@ const StockChart = ({ symbol = 'AAPL', refreshInterval = 5000 }) => {
       setError(null);
       setLoading(false);
     } catch (err) {
-      setError('Failed to fetch stock data. Make sure your FastAPI backend is running on http://localhost:8001');
+      setError('Failed to fetch stock data. Make sure your FastAPI backend is running on http://localhost:8002');
       setLoading(false);
     }
   }, [symbol]);

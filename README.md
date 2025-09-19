@@ -64,6 +64,22 @@ curl -N "http://localhost:8000/stream?message=top%20performers&interval=15"
 
 Each event contains `{ tool, params, result }` where `result.markdown` holds the latest tables.
 
+### News by symbol
+
+REST:
+
+```bash
+curl -s "http://localhost:8000/news?symbol=TSLA&limit=20" | jq
+```
+
+SSE stream:
+
+```bash
+curl -N "http://localhost:8000/news/stream?symbol=TSLA&interval=30"
+```
+
+The normalized response contains `result.articles` with fields: `title`, `url`, `time_published`, `source`, `summary`, and optional `ticker_sentiment`.
+
 ### Notes
 
 - This client uses minimal JSON-RPC over HTTP; no official Alpha Vantage REST API is used—only the MCP server URL you provide.
