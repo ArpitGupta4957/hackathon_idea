@@ -883,6 +883,7 @@ const LandingPage = () => {
                       <MarginTopMedium>
                         <ButtonGroup>
                           <Button to="/main">Get Started</Button>
+                          <Button to="/aboutus" className="is-secondary">About Us</Button>
                         </ButtonGroup>
                       </MarginTopMedium>
                     </MaxWidthXLarge>

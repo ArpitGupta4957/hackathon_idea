@@ -4,6 +4,7 @@ import './App.css';
 import LandingPage from './pages/LandingPage';
 import MainPage from './pages/MainPage';
 import ChatbotPage from './pages/ChatbotPage';
+import FinTrackerAbout from './pages/aboutUs';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/main" element={<MainPage />} />
           <Route path="/chatbot" element={<ChatbotPage />} />
+          <Route path="/aboutus" element={<FinTrackerAbout />} />
         </Routes>
       </div>
     </Router>
