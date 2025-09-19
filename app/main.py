@@ -55,6 +55,73 @@ class MCPClient:
 def pick_tool_for_message(text: str) -> tuple[str, Dict[str, Any]]:
     t = text.lower().strip()
 
+    # Historical performance patterns - past week, month, year performance
+    performance_match = re.search(r"(?:past|last)\s+(\d+)\s+(day|days|week|weeks|month|months|year|years)\s+performance\s+(?:of\s+)?([A-Za-z\.\-]{1,10})", t)
+    if performance_match:
+        period_num = int(performance_match.group(1))
+        period_type = performance_match.group(2)
+        symbol = performance_match.group(3).upper()
+        
+        # Map to appropriate time series based on period
+        if ("day" in period_type and period_num <= 7) or ("week" in period_type and period_num == 1):
+            return "TIME_SERIES_INTRADAY", {"symbol": symbol, "interval": "60min", "outputsize": "compact"}
+        elif "week" in period_type or ("day" in period_type and period_num <= 30):
+            return "TIME_SERIES_DAILY", {"symbol": symbol, "outputsize": "compact"}
+        elif "month" in period_type or ("day" in period_type and period_num <= 365):
+            return "TIME_SERIES_WEEKLY", {"symbol": symbol}
+        else:
+            return "TIME_SERIES_MONTHLY", {"symbol": symbol}
+
+    # Intraday data: intraday AAPL 5min
+    intraday_match = re.search(r"intraday\s+([A-Za-z\.\-]{1,10})(?:\s+(1min|5min|15min|30min|60min))?", t)
+    if intraday_match:
+        symbol = intraday_match.group(1).upper()
+        interval = intraday_match.group(2) or "5min"
+        return "TIME_SERIES_INTRADAY", {"symbol": symbol, "interval": interval, "outputsize": "compact"}
+
+    # Daily data: daily AAPL or daily adjusted AAPL
+    daily_match = re.search(r"daily\s+(?:adjusted\s+)?([A-Za-z\.\-]{1,10})", t)
+    if daily_match:
+        symbol = daily_match.group(1).upper()
+        if "adjusted" in t:
+            return "TIME_SERIES_DAILY_ADJUSTED", {"symbol": symbol, "outputsize": "compact"}
+        return "TIME_SERIES_DAILY", {"symbol": symbol, "outputsize": "compact"}
+
+    # Weekly data: weekly AAPL or weekly adjusted AAPL
+    weekly_match = re.search(r"weekly\s+(?:adjusted\s+)?([A-Za-z\.\-]{1,10})", t)
+    if weekly_match:
+        symbol = weekly_match.group(1).upper()
+        if "adjusted" in t:
+            return "TIME_SERIES_WEEKLY_ADJUSTED", {"symbol": symbol}
+        return "TIME_SERIES_WEEKLY", {"symbol": symbol}
+
+    # Monthly data: monthly AAPL or monthly adjusted AAPL
+    monthly_match = re.search(r"monthly\s+(?:adjusted\s+)?([A-Za-z\.\-]{1,10})", t)
+    if monthly_match:
+        symbol = monthly_match.group(1).upper()
+        if "adjusted" in t:
+            return "TIME_SERIES_MONTHLY_ADJUSTED", {"symbol": symbol}
+        return "TIME_SERIES_MONTHLY", {"symbol": symbol}
+
+    # Bulk quotes: quotes AAPL,MSFT,GOOGL
+    bulk_quotes_match = re.search(r"quotes?\s+([A-Za-z\.\-,\s]+)", t)
+    if bulk_quotes_match and "," in bulk_quotes_match.group(1):
+        symbols = [s.strip().upper() for s in bulk_quotes_match.group(1).split(",")]
+        return "REALTIME_BULK_QUOTES", {"symbols": ",".join(symbols[:100])}  # Limit to 100 symbols
+
+    # Price history patterns: "AAPL price history" or "price history AAPL"
+    price_history_match = re.search(r"(?:([A-Za-z\.\-]{1,10})\s+)?price\s+history(?:\s+([A-Za-z\.\-]{1,10}))?", t)
+    if price_history_match:
+        symbol = (price_history_match.group(1) or price_history_match.group(2) or "").upper()
+        if symbol:
+            return "TIME_SERIES_DAILY", {"symbol": symbol, "outputsize": "compact"}
+
+    # Chart patterns: "chart AAPL" or "AAPL chart"
+    chart_match = re.search(r"(?:chart\s+([A-Za-z\.\-]{1,10})|([A-Za-z\.\-]{1,10})\s+chart)", t)
+    if chart_match:
+        symbol = (chart_match.group(1) or chart_match.group(2)).upper()
+        return "TIME_SERIES_DAILY", {"symbol": symbol, "outputsize": "compact"}
+
     # Top gainers/losers/most active
     if (
         "top" in t
@@ -170,6 +237,83 @@ def summarize_result(tool: str, result: Any) -> Any:
             )
         return {"articles": articles, "raw": parsed}
 
+    # Handle time series data
+    if tool.startswith("TIME_SERIES_") and isinstance(parsed, dict):
+        symbol = parsed.get("Meta Data", {}).get("2. Symbol", "Unknown")
+        last_refreshed = parsed.get("Meta Data", {}).get("3. Last Refreshed", "Unknown")
+        
+        # Get the time series data key (varies by API)
+        time_series_key = None
+        for key in parsed.keys():
+            if "Time Series" in key or "Weekly" in key or "Monthly" in key:
+                time_series_key = key
+                break
+        
+        if time_series_key and time_series_key in parsed:
+            time_series = parsed[time_series_key]
+            
+            # Convert to list and sort by date (most recent first)
+            data_points = []
+            for date, values in time_series.items():
+                data_points.append({
+                    "date": date,
+                    "open": values.get("1. open", values.get("open")),
+                    "high": values.get("2. high", values.get("high")),
+                    "low": values.get("3. low", values.get("low")),
+                    "close": values.get("4. close", values.get("close")),
+                    "volume": values.get("5. volume", values.get("volume", "N/A"))
+                })
+            
+            # Sort by date descending and take first 10 entries
+            data_points.sort(key=lambda x: x["date"], reverse=True)
+            recent_data = data_points[:10]
+            
+            # Calculate performance metrics if we have enough data
+            performance_summary = ""
+            if len(data_points) >= 2:
+                latest_close = float(data_points[0]["close"])
+                oldest_close = float(data_points[-1]["close"])
+                change = latest_close - oldest_close
+                change_pct = (change / oldest_close) * 100
+                performance_summary = f"\n**Performance Summary:**\n- Latest Price: ${latest_close:.2f}\n- Period Change: ${change:.2f} ({change_pct:+.2f}%)\n"
+            
+            # Format as markdown table
+            table = _format_table(recent_data, f"{symbol} - Recent {time_series_key}", 
+                                ["date", "open", "high", "low", "close", "volume"])
+            
+            md = f"### {symbol} Time Series Data\n**Last Refreshed:** {last_refreshed}{performance_summary}\n\n{table}"
+            
+            return {"raw": parsed, "markdown": md, "symbol": symbol, "last_refreshed": last_refreshed, "data_points": recent_data}
+
+    # Handle bulk quotes
+    if tool == "REALTIME_BULK_QUOTES" and isinstance(parsed, dict):
+        quotes = []
+        # Handle different possible response formats
+        quote_data = parsed.get("Global Quote", parsed.get("quotes", parsed))
+        
+        if isinstance(quote_data, list):
+            for quote in quote_data:
+                quotes.append({
+                    "symbol": quote.get("01. symbol", quote.get("symbol")),
+                    "price": quote.get("05. price", quote.get("price")),
+                    "change": quote.get("09. change", quote.get("change")),
+                    "change_%": quote.get("10. change percent", quote.get("change_percent")),
+                    "volume": quote.get("06. volume", quote.get("volume"))
+                })
+        elif isinstance(quote_data, dict):
+            # Single quote response
+            quotes.append({
+                "symbol": quote_data.get("01. symbol", quote_data.get("symbol")),
+                "price": quote_data.get("05. price", quote_data.get("price")),
+                "change": quote_data.get("09. change", quote_data.get("change")),
+                "change_%": quote_data.get("10. change percent", quote_data.get("change_percent")),
+                "volume": quote_data.get("06. volume", quote_data.get("volume"))
+            })
+        
+        if quotes:
+            table = _format_table(quotes, "Real-time Quotes", ["symbol", "price", "change", "change_%", "volume"])
+            return {"raw": parsed, "markdown": table, "quotes": quotes}
+
     return parsed
 
 
@@ -257,7 +401,7 @@ def create_app() -> FastAPI:
       <button id=\"send\">Query once</button>
       <button id=\"start\">Start stream</button>
       <button id=\"stop\">Stop stream</button>
-      <span class=\"muted\">Tip: try \'quote AAPL\', \'news NVDA\', \'search Microsoft\', \'rsi TSLA daily 14\'</span>
+      <span class=\"muted\">Tip: try \'past 1 week performance of AAPL\', \'daily MSFT\', \'intraday TSLA 5min\', \'quotes AAPL,MSFT,GOOGL\'</span>
     </div>
     <h3>Markdown</h3>
     <div id=\"md\"></div>
